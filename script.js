@@ -307,13 +307,13 @@ async function buildCardCanvas() {
   // 直接按背景图本身比例导出（不做 cover 裁切）
   ctx.drawImage(img, 0, 0, W, H);
 
-  // 文案：宋体风，黑色居中
+  // 文案：宋体风，黑色居中（去掉加粗阴影，和卡片一致）
   ctx.fillStyle = "#111827";
   ctx.textBaseline = "alphabetic";
-  ctx.shadowColor = "rgba(0,0,0,0.18)";
-  ctx.shadowBlur = 6;
+  ctx.shadowColor = "rgba(0,0,0,0)";
+  ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0;
-  ctx.shadowOffsetY = 6;
+  ctx.shadowOffsetY = 0;
 
   const preview = getPreviewTextMetrics();
   const scaleToCanvas = W / preview.cardWidth;
@@ -321,7 +321,7 @@ async function buildCardCanvas() {
   const lineHeight = Math.max(1, Math.round(preview.lineHeightPx * scaleToCanvas));
   const textMaxWidth = Math.max(1, Math.round(preview.textWidth * scaleToCanvas));
   const rightPadding = Math.max(1, Math.round(preview.rightPadding * scaleToCanvas));
-  ctx.font = `500 ${fontSize}px "STXingkai", "华文行楷", "KaiTi", "楷体", "Kaiti SC", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+  ctx.font = `${fontSize}px "STXingkai", "华文行楷", "KaiTi", "楷体", "Kaiti SC", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
 
   const lines = wrapLinesByWidth(ctx, msg, textMaxWidth);
   const totalTextHeight = lines.length * lineHeight;
@@ -377,25 +377,24 @@ async function saveCurrentCard() {
 }
 
 async function shareCurrentCard() {
-  const { canvas } = await buildCardCanvas();
-  if (!canvas) return;
+  // 仅调用系统分享，不再生成文件或预览图
+  const seed = ensureSeedInUrl();
+  const url = new URL(window.location.href);
+  url.searchParams.set("seed", seed);
+  const link = url.toString();
 
-  // 只尝试系统分享图片文件；不再弹出预览层
-  if (navigator.share && navigator.canShare && canvas.toBlob) {
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-    if (blob) {
-      const file = new File([blob], "postcard.png", { type: "image/png" });
-      if (navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: document.title });
-          return;
-        } catch {
-          // 用户取消 / 目标应用拒绝，静默结束
-        }
-      }
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: document.title,
+        text: "",
+        url: link,
+      });
+    } catch {
+      // 用户取消或目标应用拒绝，静默结束
     }
   }
-  // 设备不支持系统分享时，静默结束；用户可通过“保存”按钮获取大图
+  // 不支持系统分享时，静默结束
 }
 
 document.getElementById("share").addEventListener("click", () => {
