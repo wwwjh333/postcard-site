@@ -131,24 +131,16 @@ async function buildCardCanvas() {
   const dy = (H - dh) / 2;
   ctx.drawImage(img, dx, dy, dw, dh);
 
-  // 中部浅色渐变遮罩，方便黑色毛笔字
-  const g = ctx.createLinearGradient(0, H, 0, H * 0.25);
-  g.addColorStop(0, "rgba(255,255,255,0.96)");
-  g.addColorStop(0.55, "rgba(255,255,255,0.82)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-
-  // 文案：楷体风，黑色居中
+  // 文案：宋体风，黑色居中
   ctx.fillStyle = "#111827";
   ctx.textBaseline = "alphabetic";
-  ctx.shadowColor = "rgba(255,255,255,0.2)";
-  ctx.shadowBlur = 8;
+  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowBlur = 6;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 6;
 
   const fontSize = 64;
-  ctx.font = `500 ${fontSize}px "STKaiti", "KaiTi", "FZYaoti", "FZKai-Z03", "Songti SC", "SimHei", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+  ctx.font = `500 ${fontSize}px "Songti SC", "STSong", "SimSun", "NSimSun", "宋体", "STZhongsong", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
   const lines = wrapLinesByWidth(ctx, msg, W - P * 2);
   const lineHeight = Math.round(fontSize * 1.35);
   const totalTextHeight = lines.length * lineHeight;
@@ -173,21 +165,19 @@ async function saveCurrentCard() {
   const dataUrl = canvas.toDataURL("image/png");
 
   if (isIOS || isWeChat) {
-    const w = window.open();
-    if (w) {
-      w.document.title = document.title;
-      w.document.body.style.margin = "0";
-      w.document.body.style.background = "#000";
-      const img = w.document.createElement("img");
-      img.src = dataUrl;
-      img.style.width = "100%";
-      img.style.height = "auto";
-      img.style.display = "block";
-      w.document.body.appendChild(img);
-      alert("长按图片即可保存到手机相册。");
-    } else {
-      alert("请允许弹出新窗口后，再点击一次保存。");
-    }
+    // 在 iOS / 微信中，直接用当前页面展示大图，减少弹窗失败概率
+    const prevHtml = document.documentElement.innerHTML;
+    document.body.style.margin = "0";
+    document.body.style.background = "#000";
+    document.body.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.style.width = "100%";
+    img.style.height = "auto";
+    img.style.display = "block";
+    document.body.appendChild(img);
+    alert("长按图片即可保存到手机相册，如需返回请点击浏览器返回键。");
+    // 不再恢复原页面，由浏览器返回逻辑接管
     return;
   }
 
