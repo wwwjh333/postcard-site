@@ -22,7 +22,7 @@
   .card{
     position:relative;
     width:100%;
-    aspect-ratio: 2 / 3;     /* 更瘦长的竖版比例 */
+    aspect-ratio: var(--card-aspect, 4 / 5); /* 默认兜底；实际按背景图真实比例动态设置 */
     border-radius: var(--radius);
     overflow:hidden;
     background-size: cover;

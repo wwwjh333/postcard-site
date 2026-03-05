@@ -52,11 +52,30 @@ function pickFromSeed(seed) {
   return { bg, msg };
 }
 
+async function loadImageInfo(src) {
+  const img = await loadImage(src);
+  return {
+    img,
+    w: img.naturalWidth || img.width,
+    h: img.naturalHeight || img.height,
+  };
+}
+
 function render() {
   const seed = ensureSeedInUrl();
   const { bg, msg } = pickFromSeed(seed);
   const card = document.getElementById("card");
   card.style.backgroundImage = `url("${bg}")`;
+  // 按背景图真实比例设置卡片比例，避免裁切/拉伸感
+  loadImage(bg)
+    .then((img) => {
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      if (w > 0 && h > 0) card.style.setProperty("--card-aspect", `${w} / ${h}`);
+    })
+    .catch(() => {
+      // 忽略：图片加载失败时用默认比例兜底
+    });
   document.getElementById("msg").innerText = msg;
 }
 
@@ -111,9 +130,12 @@ async function buildCardCanvas() {
   const seed = ensureSeedInUrl();
   const { bg, msg } = pickFromSeed(seed);
 
-  const W = 1080;
-  const H = 1620; // 2/3 竖版
-  const P = 64;
+  const { img, w: iw, h: ih } = await loadImageInfo(bg);
+  const maxW = 1080; // 导出清晰度上限
+  const scale = iw > 0 ? Math.min(1, maxW / iw) : 1;
+  const W = Math.max(1, Math.round(iw * scale));
+  const H = Math.max(1, Math.round(ih * scale));
+  const P = Math.round(Math.min(W, H) * 0.06);
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -121,15 +143,8 @@ async function buildCardCanvas() {
   const ctx = canvas.getContext("2d");
   if (!ctx) return { canvas, seed, msg, bg };
 
-  const img = await loadImage(bg);
-
-  // cover 绘制
-  const scale = Math.max(W / img.width, H / img.height);
-  const dw = img.width * scale;
-  const dh = img.height * scale;
-  const dx = (W - dw) / 2;
-  const dy = (H - dh) / 2;
-  ctx.drawImage(img, dx, dy, dw, dh);
+  // 直接按背景图本身比例导出（不做 cover 裁切）
+  ctx.drawImage(img, 0, 0, W, H);
 
   // 文案：宋体风，黑色居中
   ctx.fillStyle = "#111827";
@@ -139,7 +154,7 @@ async function buildCardCanvas() {
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 6;
 
-  const fontSize = 64;
+  const fontSize = Math.max(42, Math.round(Math.min(W, H) * 0.055));
   ctx.font = `500 ${fontSize}px "Songti SC", "STSong", "SimSun", "NSimSun", "宋体", "STZhongsong", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
   const lines = wrapLinesByWidth(ctx, msg, W - P * 2);
   const lineHeight = Math.round(fontSize * 1.35);
@@ -188,10 +203,23 @@ async function saveCurrentCard() {
 }
 
 async function shareCurrentCard() {
+  const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
   const seed = ensureSeedInUrl();
   const url = new URL(window.location.href);
   url.searchParams.set("seed", seed);
   const link = url.toString();
+
+  // 微信内置浏览器里，调系统分享/跳转经常触发“无法确认本次跳转是否安全”
+  // 不在这里强行跳转，改为复制链接 + 引导用户用右上角菜单分享
+  if (isWeChat) {
+    try {
+      await navigator.clipboard.writeText(link);
+      alert("已复制链接。微信内请点右上角“…”选择“发送给朋友/分享到朋友圈”。");
+    } catch {
+      prompt("复制失败，请手动复制：", link);
+    }
+    return;
+  }
 
   try {
     if (navigator.share) {
