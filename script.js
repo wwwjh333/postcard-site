@@ -204,70 +204,56 @@ async function saveCurrentCard() {
 
 async function shareCurrentCard() {
   const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
-  const seed = ensureSeedInUrl();
-  const url = new URL(window.location.href);
-  url.searchParams.set("seed", seed);
-  const link = url.toString();
+  const { canvas, seed } = await buildCardCanvas();
+  if (!canvas) return;
 
-  // 微信内置浏览器里，调系统分享/跳转经常触发“无法确认本次跳转是否安全”
-  // 不在这里强行跳转，改为复制链接 + 引导用户用右上角菜单分享
-  if (isWeChat) {
-    try {
-      await navigator.clipboard.writeText(link);
-      alert("已复制链接。微信内请点右上角“…”选择“发送给朋友/分享到朋友圈”。");
-    } catch {
-      prompt("复制失败，请手动复制：", link);
+  // 1) 优先：能直接分享“图片文件”就分享图片文件（不会带链接）
+  if (navigator.share && navigator.canShare && canvas.toBlob) {
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (blob) {
+      const file = new File([blob], `postcard-${seed}.png`, { type: "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: document.title });
+          return;
+        } catch {
+          // 用户取消 / 或目标 App 拒绝：继续走回退方案
+        }
+      }
     }
+  }
+
+  // 2) 微信内：尽量不触发“跳转安全提示”，直接给用户一张可长按的图
+  if (isWeChat) {
+    const dataUrl = canvas.toDataURL("image/png");
+    document.body.style.margin = "0";
+    document.body.style.background = "#000";
+    document.body.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = dataUrl;
+    img.style.width = "100%";
+    img.style.height = "auto";
+    img.style.display = "block";
+    document.body.appendChild(img);
+    alert("长按图片，选择“发送给朋友/分享到朋友圈”；如需返回请点击微信顶部返回。");
     return;
   }
 
-  try {
-    if (navigator.share) {
-      // 优先尝试直接分享图片（部分新浏览器支持）
-      if (navigator.canShare) {
-        try {
-          const { canvas } = await buildCardCanvas();
-          if (canvas && canvas.toBlob) {
-            const blob = await new Promise((resolve) =>
-              canvas.toBlob(resolve, "image/png")
-            );
-            if (blob) {
-              const file = new File([blob], `postcard-${seed}.png`, {
-                type: "image/png",
-              });
-              if (navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                  files: [file],
-                  title: document.title,
-                  text: "",
-                });
-                return;
-              }
-            }
-          }
-        } catch (_) {
-          // 回退到分享链接
-        }
-      }
-
-      // 通用分享：带上链接，系统分享面板里可选微信/朋友圈
-      await navigator.share({
-        title: document.title,
-        text: "来自「怀话里」的一张小卡片",
-        url: link,
-      });
-      return;
-    }
-  } catch (_) {
-    // 忽略，继续走复制链接回退
-  }
-
-  // 最后回退：复制链接
-  try {
-    await navigator.clipboard.writeText(link);
-    alert("已复制链接，可以粘贴到微信好友或朋友圈。");
-  } catch {
-    prompt("复制失败，请手动复制：", link);
+  // 3) 其他浏览器回退：打开图片，让用户长按/另存为（不再走分享链接）
+  const dataUrl = canvas.toDataURL("image/png");
+  const w = window.open();
+  if (w) {
+    w.document.title = document.title;
+    w.document.body.style.margin = "0";
+    w.document.body.style.background = "#000";
+    const img = w.document.createElement("img");
+    img.src = dataUrl;
+    img.style.width = "100%";
+    img.style.height = "auto";
+    img.style.display = "block";
+    w.document.body.appendChild(img);
+  } else {
+    alert("无法打开预览页（可能被拦截弹窗）。你可以改用“保存”后从相册分享。");
   }
 }
 
