@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Digital Postcard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <main class="wrap">
+    <section class="card" id="card" role="img" aria-label="Digital postcard">
+      <div class="overlay">
+        <div class="msg" id="msg"></div>
+        <div class="sig" id="sig"></div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button class="btn" id="again">再来一张</button>
+      <button class="btn btn-secondary" id="copy">复制这张的链接</button>
+    </div>
+
+    <p class="hint">提示：微信内打开也可以。点“再来一张”会随机生成不同内容。</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
