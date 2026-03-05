@@ -380,7 +380,7 @@ async function shareCurrentCard() {
   const { canvas } = await buildCardCanvas();
   if (!canvas) return;
 
-  // 1) 优先：能直接分享“图片文件”就分享图片文件（不会带链接）
+  // 只尝试系统分享图片文件；不再弹出预览层
   if (navigator.share && navigator.canShare && canvas.toBlob) {
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     if (blob) {
@@ -390,17 +390,12 @@ async function shareCurrentCard() {
           await navigator.share({ files: [file], title: document.title });
           return;
         } catch {
-          // 用户取消 / 目标应用拒绝，静默回退到预览层
+          // 用户取消 / 目标应用拒绝，静默结束
         }
       }
     }
   }
-
-  // 2) 回退：用同一套预览层展示图片，用户可长按保存或分享
-  if (viewerApi) {
-    const dataUrl = canvas.toDataURL("image/png");
-    viewerApi.show(dataUrl);
-  }
+  // 设备不支持系统分享时，静默结束；用户可通过“保存”按钮获取大图
 }
 
 document.getElementById("share").addEventListener("click", () => {
