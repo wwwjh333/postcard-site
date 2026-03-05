@@ -3,16 +3,16 @@ const backgrounds = ["images/bg1.jpg", "images/bg2.jpg", "images/bg3.jpg", "imag
 
 // 2) 随机祝福语（妇女节主题）
 const messages = [
-  "愿你被世界温柔以待，\n也永远温柔地对待自己。\n—— 怀话里",
-  "愿你眼里有光、心中有爱，\n走过人间每一程都不失赤诚。\n—— 怀话里",
-  "今天的花送给你，\n愿你此后每一天都盛放如花。\n—— 怀话里",
-  "不必完美，\n愿你永远忠于自己、自在发光。\n—— 怀话里",
-  "愿你在生活里被认真对待，\n在自己的世界里被柔软接住。\n—— 怀话里",
-  "祝你被理解、被尊重、被喜欢，\n也学会深深地喜欢自己。\n—— 怀话里",
-  "愿你不被定义，\n在所有角色之外，先做自己。\n—— 怀话里",
-  "愿你在柴米油盐里，\n也有鲜花、远方和不熄的热望。\n—— 怀话里",
-  "生活有时锋利，\n愿你内心永远柔软又坚定。\n—— 怀话里",
-  "无论几岁，\n都请保持好奇、浪漫与勇敢。\n—— 怀话里",
+  "愿你被世界温柔以待，\n也永远温柔地对待自己。",
+  "愿你眼里有光、心中有爱，\n走过人间每一程都不失赤诚。",
+  "今天的花送给你，\n愿你此后每一天都盛放如花。",
+  "不必完美，\n愿你永远忠于自己、自在发光。",
+  "愿你在生活里被认真对待，\n在自己的世界里被柔软接住。",
+  "祝你被理解、被尊重、被喜欢，\n也学会深深地喜欢自己。",
+  "愿你不被定义，\n在所有角色之外，先做自己。",
+  "愿你在柴米油盐里，\n也有鲜花、远方和不熄的热望。",
+  "生活有时锋利，\n愿你内心永远柔软又坚定。",
+  "无论几岁，\n都请保持好奇、浪漫与勇敢。",
 ];
 
 function newSeed() {
@@ -48,17 +48,9 @@ function ensureSeedInUrl() {
 function pickFromSeed(seed) {
   const r = seededRandom(seed);
   const bg = backgrounds[Math.floor(r() * backgrounds.length)];
-  const msg = messages[Math.floor(r() * messages.length)];
+  const base = messages[Math.floor(r() * messages.length)];
+  const msg = `${base}——怀话里`;
   return { bg, msg };
-}
-
-function getLayoutForBg(bgPath) {
-  const name = (bgPath.split("/") .pop() || "").toLowerCase();
-  if (name === "bg1.jpg" || name === "bg6.jpg") {
-    return { pos: "upper", centerFactor: 0.36 };
-  }
-  // bg2~bg5 默认正中
-  return { pos: "center", centerFactor: 0.5 };
 }
 
 async function loadImageInfo(src) {
@@ -75,12 +67,6 @@ function render() {
   const { bg, msg } = pickFromSeed(seed);
   const card = document.getElementById("card");
   card.style.backgroundImage = `url("${bg}")`;
-  const { pos } = getLayoutForBg(bg);
-  const overlay = document.querySelector(".overlay");
-  if (overlay) {
-    overlay.classList.toggle("pos-upper", pos === "upper");
-    overlay.classList.toggle("pos-center", pos === "center");
-  }
   // 按背景图真实比例设置卡片比例，避免裁切/拉伸感
   loadImage(bg)
     .then((img) => {
@@ -175,8 +161,7 @@ async function buildCardCanvas() {
   const lineHeight = Math.round(fontSize * 1.35);
   const totalTextHeight = lines.length * lineHeight;
 
-  const { centerFactor } = getLayoutForBg(bg);
-  let yCenter = H * centerFactor;
+  let yCenter = H * 0.5;
   let y = Math.round(yCenter - totalTextHeight / 2 + fontSize * 0.9);
   if (y < P + fontSize) y = P + fontSize;
 

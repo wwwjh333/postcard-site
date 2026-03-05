@@ -39,15 +39,6 @@
     padding:18px;
   /* 不再加额外蒙版，直接展示原图 */
   }
-
-.overlay.pos-upper{
-  justify-content:flex-start;
-  padding-top:18%;
-}
-
-.overlay.pos-center{
-  justify-content:center;
-}
   
   .msg{
     color:#111827; /* 近黑色，搭配原图 */
