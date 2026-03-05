@@ -26,9 +26,200 @@ body{
   aspect-ratio: var(--card-aspect, 4 / 5); /* 默认兜底；实际按背景图真实比例动态设置 */
   border-radius: var(--radius);
   overflow:hidden;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  perspective: 1200px;
+}
+
+.card-inner{
+  position:relative;
+  width:100%;
+  height:100%;
+  transform-style: preserve-3d;
+  transition: transform .6s ease;
+}
+
+.card.is-flipped .card-inner{
+  transform: rotateY(180deg);
+}
+
+.front,
+.back{
+  position:absolute;
+  inset:0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.front{
+  transform: rotateY(0deg);
   background-size: cover;
   background-position:center;
-  box-shadow: var(--shadow);
+}
+
+.back{
+  transform: rotateY(180deg);
+  background:#ffffff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px 20px;
+}
+
+.back-inner{
+  width:100%;
+  text-align:center;
+  color:#111827;
+  position: relative;
+  min-height: 100%;
+}
+
+.back-title{
+  margin:0 0 14px;
+  font-size: clamp(18px, 4.2vw, 24px);
+  line-height:1.45;
+  font-family: "STXingkai", "华文行楷", "KaiTi", "楷体", "Kaiti SC", "PingFang SC", "Microsoft YaHei",
+    system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+.back-lucky-btn{
+  border:1px solid #d1d5db;
+  background:#f9fafb;
+  color:#111827;
+  border-radius: 999px;
+  padding:10px 18px;
+  font-size:15px;
+  cursor:pointer;
+  min-width: 168px;
+  position: relative;
+}
+
+.back-lucky-btn.is-loading{
+  pointer-events: none;
+}
+
+.back-lucky-btn.is-loading::after{
+  content: "...";
+  display:inline-block;
+  width: 0;
+  overflow:hidden;
+  vertical-align: bottom;
+  animation: dots 1.1s steps(4, end) infinite;
+}
+
+.back-lucky-text{
+  min-height: 24px;
+  margin:0;
+  color:#374151;
+  font-size:16px;
+  line-height:1.5;
+  white-space: pre-line;
+}
+
+.back-lucky-note{
+  margin:8px 0 0;
+  color:#6b7280;
+  font-size:11px;
+  line-height:1.4;
+}
+
+.back-lucky-repeat-note{
+  min-height: 16px;
+  margin:8px 0 0;
+  color:#6b7280;
+  font-size:9px;
+  line-height:1.4;
+}
+
+.back-corner-note{
+  position:absolute;
+  right:2px;
+  bottom:0;
+  margin:0;
+  text-align:right;
+  color:#6b7280;
+  font-size:15px;
+  line-height:1.35;
+  pointer-events:none;
+}
+
+.lucky-stage{
+  margin-top:16px;
+  min-height: 150px;
+  position: relative;
+}
+
+.lucky-envelope{
+  width: 64px;
+  height: 42px;
+  margin: 0 auto;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  opacity: 0;
+  transform: translateY(-24px) scale(0.9);
+  position: relative;
+}
+
+.lucky-envelope::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(135deg, transparent 49%, #e5e7eb 50%, #e5e7eb 52%, transparent 53%),
+    linear-gradient(225deg, transparent 49%, #e5e7eb 50%, #e5e7eb 52%, transparent 53%);
+}
+
+.lucky-ticket{
+  width:min(92%, 260px);
+  margin: 10px auto 0;
+  background:#fffdf7;
+  border:1px solid #f3e8c8;
+  border-radius:12px;
+  padding:14px 14px 12px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.06);
+  opacity:0;
+  transform: translateY(6px) scaleY(0.2);
+  transform-origin: top center;
+}
+
+.lucky-ticket-title{
+  margin:0 0 6px;
+  color:#92400e;
+  font-size:14px;
+  letter-spacing: .08em;
+}
+
+.lucky-stage.is-dropping .lucky-envelope{
+  opacity:1;
+  animation: dropEnvelope .7s cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+.lucky-stage.is-revealed .lucky-envelope{
+  opacity:0;
+  transform: translateY(18px) scale(.92);
+  transition: all .25s ease;
+}
+
+.lucky-stage.is-revealed .lucky-ticket{
+  opacity:1;
+  animation: unfoldTicket .45s ease-out forwards;
+}
+
+@keyframes dots{
+  from { width: 0; }
+  to { width: 1.6em; }
+}
+
+@keyframes dropEnvelope{
+  0% { transform: translateY(-24px) scale(.9); }
+  75% { transform: translateY(20px) scale(1.02); }
+  100% { transform: translateY(14px) scale(1); }
+}
+
+@keyframes unfoldTicket{
+  0% { opacity:0; transform: translateY(6px) scaleY(0.2); }
+  100% { opacity:1; transform: translateY(0) scaleY(1); }
 }
 
 .overlay{
@@ -43,13 +234,13 @@ body{
 
 .msg{
   color:#111827; /* 近黑色，搭配原图 */
-  font-size: clamp(20px, 4.4vw, 30px);
+  font-size: clamp(18px, 4vw, 28px);
   line-height:1.35;
   font-weight:500;
   text-shadow: none;
   white-space: normal; /* 用 HTML <br> 来换行 */
   width: 100%;         /* 关键：让右对齐有参照宽度 */
-  font-family: "Songti SC", "STSong", "SimSun", "NSimSun", "宋体", "STZhongsong", "PingFang SC", "Microsoft YaHei",
+  font-family: "STXingkai", "华文行楷", "KaiTi", "楷体", "Kaiti SC", "PingFang SC", "Microsoft YaHei",
     system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
@@ -69,7 +260,7 @@ body{
   display:flex;
   justify-content:center;
   gap:10px;
-  max-width:340px;
+  max-width:100%;
 }
 
 .btn{

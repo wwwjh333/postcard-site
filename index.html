@@ -9,15 +9,42 @@
 
 <body>
   <main class="wrap">
-    <section class="card" id="card" role="img" aria-label="Digital postcard">
-      <div class="overlay">
-        <div class="msg" id="msg"></div>
+    <section class="card" id="card" aria-label="Digital postcard">
+      <div class="card-inner" id="cardInner">
+        <div class="front" id="front">
+          <div class="overlay">
+            <div class="msg" id="msg"></div>
+          </div>
+        </div>
+        <div class="back" id="back">
+          <div class="back-inner">
+            <p class="back-title">怀话里给你准备了节日小惊喜</p>
+            <button class="back-lucky-btn" id="luckyBtn" type="button">打开幸运信封</button>
+            <div class="lucky-stage" id="luckyStage" aria-live="polite">
+              <div class="lucky-envelope" aria-hidden="true"></div>
+              <div class="lucky-ticket" id="luckyTicket">
+                <p class="lucky-ticket-title">本桌幸运结果</p>
+                <p class="back-lucky-text" id="luckyText"></p>
+                <p class="back-lucky-note">和你的好友投个票，选出这一桌的最终惊喜。</p>
+                <p class="back-lucky-repeat-note" id="repeatLuckyNote"></p>
+              </div>
+            </div>
+            <p class="back-corner-note">
+              分享这张明信片和你的节日餐桌<br>
+              到任一社交平台<br>
+              即可兑换惊喜礼物<br><br>
+              每桌限兑换一份<br>
+              仅限 3 月 8 日堂食使用
+            </p>
+          </div>
+        </div>
       </div>
     </section>
 
     <div class="actions">
       <button class="btn btn-secondary" id="save">保存</button>
       <button class="btn btn-secondary" id="share">分享</button>
+      <button class="btn btn-secondary" id="surprise">查收惊喜</button>
     </div>
   </main>
 
