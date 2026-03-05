@@ -1,5 +1,12 @@
 // 1) 背景图：把你 images/ 里的文件名写进来
-const backgrounds = ["images/bg1.jpg", "images/bg2.jpg", "images/bg3.jpg", "images/bg4.jpg", "images/bg5.jpg", "images/bg6.jpg"];
+const backgrounds = [
+  "images/bg1.jpg",
+  "images/bg2.jpg",
+  "images/bg3.jpg",
+  "images/bg4.jpg",
+  "images/bg5.jpg",
+  "images/bg6.jpg",
+];
 
 // 2) 随机祝福语（妇女节主题）
 const messages = [
@@ -14,6 +21,15 @@ const messages = [
   "生活有时锋利，\n愿你内心永远柔软又坚定。",
   "无论几岁，\n都请保持好奇、浪漫与勇敢。",
 ];
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function newSeed() {
   return Math.random().toString(36).slice(2, 10);
@@ -45,11 +61,17 @@ function ensureSeedInUrl() {
   return seed;
 }
 
+// 正文结束后另起一行追加署名
+function appendSuffixToLastLine(text, suffix) {
+  const s = String(text).replace(/\s+$/g, "");
+  return `${s}\n${suffix}`;
+}
+
 function pickFromSeed(seed) {
   const r = seededRandom(seed);
   const bg = backgrounds[Math.floor(r() * backgrounds.length)];
   const base = messages[Math.floor(r() * messages.length)];
-  const msg = `${base}——怀话里`;
+  const msg = appendSuffixToLastLine(base, "——妇女节快乐");
   return { bg, msg };
 }
 
@@ -65,19 +87,27 @@ async function loadImageInfo(src) {
 function render() {
   const seed = ensureSeedInUrl();
   const { bg, msg } = pickFromSeed(seed);
+
   const card = document.getElementById("card");
   card.style.backgroundImage = `url("${bg}")`;
-  // 按背景图真实比例设置卡片比例，避免裁切/拉伸感
+
+  // 按背景图真实比例设置卡片比例
   loadImage(bg)
     .then((img) => {
       const w = img.naturalWidth || img.width;
       const h = img.naturalHeight || img.height;
       if (w > 0 && h > 0) card.style.setProperty("--card-aspect", `${w} / ${h}`);
     })
-    .catch(() => {
-      // 忽略：图片加载失败时用默认比例兜底
-    });
-  document.getElementById("msg").innerText = msg;
+    .catch(() => {});
+
+  // 网页显示：拆成正文 + 署名（署名右对齐）
+  const msgEl = document.getElementById("msg");
+  const parts = String(msg).split("\n");
+  const signature = parts.pop() ?? "";
+  msgEl.innerHTML = `
+    <div class="msg-body">${parts.map(escapeHtml).join("<br>")}</div>
+    <div class="msg-sig">${escapeHtml(signature)}</div>
+  `;
 }
 
 function loadImage(src) {
@@ -124,6 +154,7 @@ function wrapLinesByWidth(ctx, text, maxWidth) {
     }
     if (line) out.push(line.trimEnd());
   }
+  fixLastOrphan(out);
   return out;
 }
 
@@ -132,6 +163,7 @@ async function buildCardCanvas() {
   const { bg, msg } = pickFromSeed(seed);
 
   const { img, w: iw, h: ih } = await loadImageInfo(bg);
+
   const maxW = 1080; // 导出清晰度上限
   const scale = iw > 0 ? Math.min(1, maxW / iw) : 1;
   const W = Math.max(1, Math.round(iw * scale));
@@ -157,6 +189,7 @@ async function buildCardCanvas() {
 
   const fontSize = Math.max(42, Math.round(Math.min(W, H) * 0.055));
   ctx.font = `500 ${fontSize}px "Songti SC", "STSong", "SimSun", "NSimSun", "宋体", "STZhongsong", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+
   const lines = wrapLinesByWidth(ctx, msg, W - P * 2);
   const lineHeight = Math.round(fontSize * 1.35);
   const totalTextHeight = lines.length * lineHeight;
@@ -165,8 +198,16 @@ async function buildCardCanvas() {
   let y = Math.round(yCenter - totalTextHeight / 2 + fontSize * 0.9);
   if (y < P + fontSize) y = P + fontSize;
 
-  for (const line of lines) {
-    ctx.fillText(line, P, y);
+  // ✅ 正文居中，最后一行（署名）右对齐
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (i === lines.length - 1) {
+      ctx.textAlign = "right";
+      ctx.fillText(line, W - P, y);
+    } else {
+      ctx.textAlign = "center";
+      ctx.fillText(line, Math.round(W / 2), y);
+    }
     y += lineHeight;
   }
 
@@ -182,7 +223,6 @@ async function saveCurrentCard() {
   const dataUrl = canvas.toDataURL("image/png");
 
   if (isIOS || isWeChat) {
-    // 在 iOS / 微信中，直接用当前页面展示大图，减少弹窗失败概率
     const prevHtml = document.documentElement.innerHTML;
     document.body.style.margin = "0";
     document.body.style.background = "#000";
@@ -194,7 +234,6 @@ async function saveCurrentCard() {
     img.style.display = "block";
     document.body.appendChild(img);
     alert("长按图片即可保存到手机相册，如需返回请点击浏览器返回键。");
-    // 不再恢复原页面，由浏览器返回逻辑接管
     return;
   }
 
@@ -225,7 +264,7 @@ async function shareCurrentCard() {
     }
   }
 
-  // 2) 微信内：尽量不触发“跳转安全提示”，直接给用户一张可长按的图
+  // 2) 微信内：直接给用户一张可长按的图
   if (isWeChat) {
     const dataUrl = canvas.toDataURL("image/png");
     document.body.style.margin = "0";
@@ -241,7 +280,7 @@ async function shareCurrentCard() {
     return;
   }
 
-  // 3) 其他浏览器回退：打开图片，让用户长按/另存为（不再走分享链接）
+  // 3) 其他浏览器回退：打开图片，让用户长按/另存为
   const dataUrl = canvas.toDataURL("image/png");
   const w = window.open();
   if (w) {
@@ -270,5 +309,19 @@ document.getElementById("save").addEventListener("click", async () => {
     alert("保存失败：请确认图片文件存在且可加载。");
   }
 });
+
+function fixLastOrphan(lines) {
+  if (!Array.isArray(lines) || lines.length < 2) return lines;
+  const last = lines[lines.length - 1];
+  const prev = lines[lines.length - 2];
+
+  // 最后一行只有 1 个字（或 1 个可见字符）
+  if (last && last.trim().length === 1 && prev && prev.trim().length >= 2) {
+    const moved = prev.slice(-1);
+    lines[lines.length - 2] = prev.slice(0, -1);
+    lines[lines.length - 1] = moved + last;
+  }
+  return lines;
+}
 
 render();
