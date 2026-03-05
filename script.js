@@ -377,24 +377,22 @@ async function saveCurrentCard() {
 }
 
 async function shareCurrentCard() {
-  // 仅调用系统分享，不再生成文件或预览图
-  const seed = ensureSeedInUrl();
-  const url = new URL(window.location.href);
-  url.searchParams.set("seed", seed);
-  const link = url.toString();
+  // 先把当前卡片渲染成图片，再走系统分享
+  const { canvas } = await buildCardCanvas();
+  if (!canvas) return;
 
-  if (navigator.share) {
+  if (navigator.share && navigator.canShare && canvas.toBlob) {
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return;
+    const file = new File([blob], "postcard.png", { type: "image/png" });
+    if (!navigator.canShare({ files: [file] })) return;
     try {
-      await navigator.share({
-        title: document.title,
-        text: "",
-        url: link,
-      });
+      await navigator.share({ files: [file], title: document.title });
     } catch {
-      // 用户取消或目标应用拒绝，静默结束
+      // 用户取消或目标应用拒绝：静默结束
     }
   }
-  // 不支持系统分享时，静默结束
+  // 不支持系统分享图片文件的环境：静默结束（可以让用户用“保存”按钮自己长按分享）
 }
 
 document.getElementById("share").addEventListener("click", () => {
