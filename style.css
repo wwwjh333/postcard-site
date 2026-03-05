@@ -49,21 +49,14 @@
     white-space: pre-wrap;
   }
   
-  .sig{
-    margin-top:10px;
-    color: rgba(255,255,255,.9);
-    font-size: clamp(13px, 2.8vw, 16px);
-    text-shadow: 0 2px 10px rgba(0,0,0,.25);
-  }
-  
   .actions{
     margin-top:12px;
-    display:flex;
-    gap:10px;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:10px;
   }
   
   .btn{
-    flex:1;
     border:none;
     border-radius: 12px;
     padding:12px 14px;
@@ -75,9 +68,9 @@
   .btn-secondary{
     opacity:.92;
   }
-  
-  .hint{
-    margin:10px 2px 0;
-    color:#6b7280;
-    font-size:13px;
+
+@media (max-width: 420px){
+  .actions{
+    grid-template-columns: 1fr;
   }
+}
