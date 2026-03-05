@@ -52,6 +52,15 @@ function pickFromSeed(seed) {
   return { bg, msg };
 }
 
+function getLayoutForBg(bgPath) {
+  const name = (bgPath.split("/") .pop() || "").toLowerCase();
+  if (name === "bg1.jpg" || name === "bg6.jpg") {
+    return { pos: "upper", centerFactor: 0.36 };
+  }
+  // bg2~bg5 默认正中
+  return { pos: "center", centerFactor: 0.5 };
+}
+
 async function loadImageInfo(src) {
   const img = await loadImage(src);
   return {
@@ -66,6 +75,12 @@ function render() {
   const { bg, msg } = pickFromSeed(seed);
   const card = document.getElementById("card");
   card.style.backgroundImage = `url("${bg}")`;
+  const { pos } = getLayoutForBg(bg);
+  const overlay = document.querySelector(".overlay");
+  if (overlay) {
+    overlay.classList.toggle("pos-upper", pos === "upper");
+    overlay.classList.toggle("pos-center", pos === "center");
+  }
   // 按背景图真实比例设置卡片比例，避免裁切/拉伸感
   loadImage(bg)
     .then((img) => {
@@ -160,7 +175,9 @@ async function buildCardCanvas() {
   const lineHeight = Math.round(fontSize * 1.35);
   const totalTextHeight = lines.length * lineHeight;
 
-  let y = Math.round(H / 2 - totalTextHeight / 2 + fontSize * 0.9);
+  const { centerFactor } = getLayoutForBg(bg);
+  let yCenter = H * centerFactor;
+  let y = Math.round(yCenter - totalTextHeight / 2 + fontSize * 0.9);
   if (y < P + fontSize) y = P + fontSize;
 
   for (const line of lines) {
