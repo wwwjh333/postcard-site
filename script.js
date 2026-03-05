@@ -1,5 +1,5 @@
 // 1) 背景图：把你 images/ 里的文件名写进来
-const backgrounds = ["images/bg1.jpg", "images/bg2.jpg"];
+const backgrounds = ["images/bg1.jpg", "images/bg2.jpg", "images/bg3.jpg", "images/bg4.jpg", "images/bg5.jpg", "images/bg6.jpg"];
 
 // 2) 随机祝福语（妇女节主题）
 const messages = [
