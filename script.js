@@ -349,87 +349,57 @@ async function buildCardCanvas() {
   return { canvas, seed, msg, bg };
 }
 
+function initViewer() {
+  const viewer = document.getElementById("viewer");
+  const img = document.getElementById("viewerImg");
+  const backdrop = document.getElementById("viewerBackdrop");
+  const closeBtn = document.getElementById("viewerClose");
+  if (!viewer || !img || !backdrop || !closeBtn) return null;
+
+  const hide = () => {
+    viewer.hidden = true;
+    img.src = "";
+  };
+
+  backdrop.addEventListener("click", hide);
+  closeBtn.addEventListener("click", hide);
+
+  return { viewer, img, show(dataUrl) { img.src = dataUrl; viewer.hidden = false; } };
+}
+
+const viewerApi = initViewer();
+
 async function saveCurrentCard() {
-  const { canvas, seed } = await buildCardCanvas();
-  if (!canvas) return;
-
-  const isIOS = /iP(hone|ad|od)/i.test(navigator.userAgent);
-  const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+  const { canvas } = await buildCardCanvas();
+  if (!canvas || !viewerApi) return;
   const dataUrl = canvas.toDataURL("image/png");
-
-  if (isIOS || isWeChat) {
-    const prevHtml = document.documentElement.innerHTML;
-    document.body.style.margin = "0";
-    document.body.style.background = "#000";
-    document.body.innerHTML = "";
-    const img = document.createElement("img");
-    img.src = dataUrl;
-    img.style.width = "100%";
-    img.style.height = "auto";
-    img.style.display = "block";
-    document.body.appendChild(img);
-    alert("长按图片即可保存到手机相册，如需返回请点击浏览器返回键。");
-    return;
-  }
-
-  const a = document.createElement("a");
-  a.download = `postcard-${seed}.png`;
-  a.href = dataUrl;
-  a.click();
+  viewerApi.show(dataUrl);
 }
 
 async function shareCurrentCard() {
-  const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
-  const { canvas, seed } = await buildCardCanvas();
+  const { canvas } = await buildCardCanvas();
   if (!canvas) return;
 
   // 1) 优先：能直接分享“图片文件”就分享图片文件（不会带链接）
   if (navigator.share && navigator.canShare && canvas.toBlob) {
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     if (blob) {
-      const file = new File([blob], `postcard-${seed}.png`, { type: "image/png" });
+      const file = new File([blob], "postcard.png", { type: "image/png" });
       if (navigator.canShare({ files: [file] })) {
         try {
           await navigator.share({ files: [file], title: document.title });
           return;
         } catch {
-          // 用户取消 / 或目标 App 拒绝：继续走回退方案
+          // 用户取消 / 目标应用拒绝，静默回退到预览层
         }
       }
     }
   }
 
-  // 2) 微信内：直接给用户一张可长按的图
-  if (isWeChat) {
+  // 2) 回退：用同一套预览层展示图片，用户可长按保存或分享
+  if (viewerApi) {
     const dataUrl = canvas.toDataURL("image/png");
-    document.body.style.margin = "0";
-    document.body.style.background = "#000";
-    document.body.innerHTML = "";
-    const img = document.createElement("img");
-    img.src = dataUrl;
-    img.style.width = "100%";
-    img.style.height = "auto";
-    img.style.display = "block";
-    document.body.appendChild(img);
-    alert("长按图片，选择“发送给朋友/分享到朋友圈”；如需返回请点击微信顶部返回。");
-    return;
-  }
-
-  // 3) 其他浏览器回退：打开图片，让用户长按/另存为
-  const dataUrl = canvas.toDataURL("image/png");
-  const w = window.open();
-  if (w) {
-    w.document.title = document.title;
-    w.document.body.style.margin = "0";
-    w.document.body.style.background = "#000";
-    const img = w.document.createElement("img");
-    img.src = dataUrl;
-    img.style.width = "100%";
-    img.style.height = "auto";
-    img.style.display = "block";
-    w.document.body.appendChild(img);
-  } else {
-    alert("无法打开预览页（可能被拦截弹窗）。你可以改用“保存”后从相册分享。");
+    viewerApi.show(dataUrl);
   }
 }
 
@@ -441,7 +411,7 @@ document.getElementById("save").addEventListener("click", async () => {
   try {
     await saveCurrentCard();
   } catch {
-    alert("保存失败：请确认图片文件存在且可加载。");
+    // 静默失败：可能是用户取消或环境限制，这里不再额外弹窗打扰
   }
 });
 

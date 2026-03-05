@@ -138,7 +138,7 @@ body{
   margin:0;
   text-align:right;
   color:#6b7280;
-  font-size:15px;
+  font-size:13px;
   line-height:1.35;
   pointer-events:none;
 }
@@ -285,4 +285,57 @@ body{
   .actions{
     max-width:100%;
   }
+}
+
+/* 通用预览层：保存 / 分享 共用 */
+.viewer{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+}
+
+.viewer[hidden]{
+  display:none;
+}
+
+.viewer-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.8);
+}
+
+.viewer-panel{
+  position:relative;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+}
+
+.viewer-img{
+  max-width:min(520px, 100%);
+  max-height:100%;
+  width:100%;
+  height:auto;
+  border-radius:14px;
+  display:block;
+  background:#000;
+  box-shadow: 0 18px 40px rgba(0,0,0,.45);
+}
+
+.viewer-close{
+  position:absolute;
+  top:14px;
+  right:14px;
+  width:36px;
+  height:36px;
+  border-radius:999px;
+  border:0;
+  background:rgba(255,255,255,.96);
+  color:#111827;
+  font-size:24px;
+  line-height:36px;
+  cursor:pointer;
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
 }
