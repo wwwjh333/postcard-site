@@ -398,7 +398,6 @@ const textYOffsetUnitsByBg = {
 };
 const GLOBAL_TEXT_Y_OFFSET_UNITS = -10; // 全部文案统一上移 10%
 
-const LUCKY_RESULT_KEY = "postcard_lucky_result_v2";
 let currentCardContent = null;
 
 function getTextYOffsetUnits(bg) {
@@ -453,17 +452,20 @@ function ensureSeedInUrl() {
 
 const FIXED_FOOTER_LINES = ["——", "", "3.8 妇女节", "在怀话里"];
 
-function getStoredLuckyResult() {
-  try {
-    return localStorage.getItem(LUCKY_RESULT_KEY);
-  } catch {
-    return null;
-  }
-}
+function pickDeterministicLuckyResult() {
+  const url = new URL(window.location.href);
+  const params = new URLSearchParams(url.search);
+  // seed 只是前台文案随机用，不参与幸运结果固定键
+  params.delete("seed");
+  const sortedParams = [...params.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]))
+    .map(([k, v]) => `${k}=${v}`)
+    .join("&");
+  const stableKey = `${url.origin}${url.pathname}?${sortedParams}`;
 
-function createAndStoreLuckyResult() {
+  const rand = seededRandom(`lucky:${stableKey}`);
   const totalWeight = luckyPrizePool.reduce((sum, item) => sum + item.weight, 0);
-  let n = Math.random() * totalWeight;
+  let n = rand() * totalWeight;
   let picked = luckyPrizePool[luckyPrizePool.length - 1];
   for (const item of luckyPrizePool) {
     n -= item.weight;
@@ -472,11 +474,7 @@ function createAndStoreLuckyResult() {
       break;
     }
   }
-  const prize = `${picked.title}\n${picked.detail}`;
-  try {
-    localStorage.setItem(LUCKY_RESULT_KEY, prize);
-  } catch {}
-  return prize;
+  return `${picked.title}\n${picked.detail}`;
 }
 
 function playLuckyEnvelopeAnimation({ luckyBtn, luckyStage, luckyText, result }) {
@@ -561,12 +559,9 @@ function render() {
     luckyBtn.onclick = (e) => {
       e.stopPropagation();
       if (luckyBtn.classList.contains("is-loading")) return;
-      const stored = getStoredLuckyResult();
-      const result = stored || createAndStoreLuckyResult();
+      const result = pickDeterministicLuckyResult();
       if (repeatLuckyNote) {
-        repeatLuckyNote.textContent = stored
-          ? "这封幸运信封你已经签收过啦～我帮你保留上次的惊喜"
-          : "";
+        repeatLuckyNote.textContent = "同一链接的幸运结果固定，重复扫码仍是这一份惊喜。";
       }
       playLuckyEnvelopeAnimation({ luckyBtn, luckyStage, luckyText, result });
     };
