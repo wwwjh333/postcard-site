@@ -396,12 +396,13 @@ const textYOffsetUnitsByBg = {
   "images/bg1.jpg": -12, // 上移 12 个单位（1单位=画布高度1%）
   "images/bg6.jpg": -10, // 上移 10 个单位（1单位=画布高度1%）
 };
+const GLOBAL_TEXT_Y_OFFSET_UNITS = -10; // 全部文案统一上移 10%
 
 const LUCKY_RESULT_KEY = "postcard_lucky_result_v2";
 let currentCardContent = null;
 
 function getTextYOffsetUnits(bg) {
-  return textYOffsetUnitsByBg[bg] || 0;
+  return GLOBAL_TEXT_Y_OFFSET_UNITS + (textYOffsetUnitsByBg[bg] || 0);
 }
 
 function applyPreviewTextOffset(msgEl, card, bg) {
@@ -450,11 +451,7 @@ function ensureSeedInUrl() {
   return seed;
 }
 
-// 正文结束后另起一行追加署名
-function appendSuffixToLastLine(text, suffix) {
-  const s = String(text).replace(/\s+$/g, "");
-  return `${s}\n${suffix}`;
-}
+const FIXED_FOOTER_LINES = ["——", "", "3.8 妇女节", "在怀话里"];
 
 function getStoredLuckyResult() {
   try {
@@ -505,8 +502,10 @@ function getCurrentCardContent() {
   const r = seededRandom(seed);
   const bg = backgrounds[Math.floor(r() * backgrounds.length)];
   const base = messages[Math.floor(Math.random() * messages.length)];
-  const msg = appendSuffixToLastLine(base, "——妇女节快乐");
-  currentCardContent = { seed, bg, msg };
+  const mainText = String(base).replace(/\s+$/g, "");
+  const footerLines = [...FIXED_FOOTER_LINES];
+  const msg = `${mainText}\n\n${footerLines.join("\n")}`;
+  currentCardContent = { seed, bg, msg, mainText, footerLines };
   return currentCardContent;
 }
 
@@ -520,7 +519,7 @@ async function loadImageInfo(src) {
 }
 
 function render() {
-  const { bg, msg } = getCurrentCardContent();
+  const { bg, mainText, footerLines } = getCurrentCardContent();
 
   const card = document.getElementById("card");
   const front = document.getElementById("front");
@@ -536,13 +535,14 @@ function render() {
     })
     .catch(() => {});
 
-  // 网页显示：拆成正文 + 署名（署名右对齐）
+  // 网页显示：主文案 + 固定副文案
   const msgEl = document.getElementById("msg");
-  const parts = String(msg).split("\n");
-  const signature = parts.pop() ?? "";
+  const footerHtml = footerLines
+    .map((line) => (line ? escapeHtml(line) : "&nbsp;"))
+    .join("<br>");
   msgEl.innerHTML = `
-    <div class="msg-body">${parts.map(escapeHtml).join("<br>")}</div>
-    <div class="msg-sig">${escapeHtml(signature)}</div>
+    <div class="msg-main">${String(mainText).split("\n").map(escapeHtml).join("<br>")}</div>
+    <div class="msg-sub">${footerHtml}</div>
   `;
   applyPreviewTextOffset(msgEl, card, bg);
 
@@ -625,11 +625,14 @@ function wrapLinesByWidth(ctx, text, maxWidth) {
 function getPreviewTextMetrics() {
   const card = document.getElementById("card");
   const msgEl = document.getElementById("msg");
+  const msgMainEl = msgEl ? msgEl.querySelector(".msg-main") : null;
+  const msgSubEl = msgEl ? msgEl.querySelector(".msg-sub") : null;
   const overlay = card ? card.querySelector(".front .overlay") : null;
 
   const cardWidth = card?.clientWidth || 0;
   const overlayStyle = overlay ? getComputedStyle(overlay) : null;
-  const msgStyle = msgEl ? getComputedStyle(msgEl) : null;
+  const msgMainStyle = msgMainEl ? getComputedStyle(msgMainEl) : null;
+  const msgSubStyle = msgSubEl ? getComputedStyle(msgSubEl) : null;
 
   const px = (v, fallback = 0) => {
     const n = Number.parseFloat(v);
@@ -640,20 +643,29 @@ function getPreviewTextMetrics() {
     ? px(overlayStyle.paddingLeft, 18) + px(overlayStyle.paddingRight, 18)
     : 36;
   const msgWidth = msgEl?.getBoundingClientRect().width || 0;
-  const fontSize = msgStyle ? px(msgStyle.fontSize, 30) : 30;
-  const lineHeightPx = msgStyle ? px(msgStyle.lineHeight, fontSize * 1.35) : fontSize * 1.35;
+  const mainFontSize = msgMainStyle ? px(msgMainStyle.fontSize, 22) : 22;
+  const mainLineHeightPx = msgMainStyle
+    ? px(msgMainStyle.lineHeight, mainFontSize * 1.35)
+    : mainFontSize * 1.35;
+  const subFontSize = msgSubStyle ? px(msgSubStyle.fontSize, 17) : 17;
+  const subLineHeightPx = msgSubStyle
+    ? px(msgSubStyle.lineHeight, subFontSize * 1.5)
+    : subFontSize * 1.5;
+  const subMarginTopPx = msgSubStyle ? px(msgSubStyle.marginTop, 10) : 10;
 
   return {
     cardWidth: Math.max(1, cardWidth),
-    fontSize,
-    lineHeightPx,
+    mainFontSize,
+    mainLineHeightPx,
+    subFontSize,
+    subLineHeightPx,
+    subMarginTopPx,
     textWidth: Math.max(1, msgWidth || (cardWidth - paddingX)),
-    rightPadding: Math.max(1, (cardWidth - (msgWidth || (cardWidth - paddingX))) / 2),
   };
 }
 
 async function buildCardCanvas() {
-  const { seed, bg, msg } = getCurrentCardContent();
+  const { seed, bg, msg, mainText, footerLines } = getCurrentCardContent();
 
   const { img, w: iw, h: ih } = await loadImageInfo(bg);
 
@@ -672,8 +684,7 @@ async function buildCardCanvas() {
   // 直接按背景图本身比例导出（不做 cover 裁切）
   ctx.drawImage(img, 0, 0, W, H);
 
-  // 文案：宋体风，黑色居中（去掉加粗阴影，和卡片一致）
-  ctx.fillStyle = "#111827";
+  // 文案绘制
   ctx.textBaseline = "alphabetic";
   ctx.shadowColor = "rgba(0,0,0,0)";
   ctx.shadowBlur = 0;
@@ -682,33 +693,48 @@ async function buildCardCanvas() {
 
   const preview = getPreviewTextMetrics();
   const scaleToCanvas = W / preview.cardWidth;
-  const fontSize = Math.max(1, Math.round(preview.fontSize * scaleToCanvas));
-  const lineHeight = Math.max(1, Math.round(preview.lineHeightPx * scaleToCanvas));
+  const mainFontSize = Math.max(1, Math.round(preview.mainFontSize * scaleToCanvas));
+  const mainLineHeight = Math.max(1, Math.round(preview.mainLineHeightPx * scaleToCanvas));
+  const subFontSize = Math.max(1, Math.round(preview.subFontSize * scaleToCanvas));
+  const subLineHeight = Math.max(1, Math.round(preview.subLineHeightPx * scaleToCanvas));
+  const subMarginTop = Math.max(0, Math.round(preview.subMarginTopPx * scaleToCanvas));
   const textMaxWidth = Math.max(1, Math.round(preview.textWidth * scaleToCanvas));
-  const rightPadding = Math.max(1, Math.round(preview.rightPadding * scaleToCanvas));
-  ctx.font = `${fontSize}px "STXingkai", "华文行楷", "KaiTi", "楷体", "Kaiti SC", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
+  ctx.font = `${mainFontSize}px "Source Han Serif SC", "Noto Serif SC", "Songti SC", "STSong", serif`;
 
-  const lines = wrapLinesByWidth(ctx, msg, textMaxWidth);
-  const totalTextHeight = lines.length * lineHeight;
+  const mainLines = wrapLinesByWidth(ctx, mainText, textMaxWidth);
+  const subLines = Array.isArray(footerLines) && footerLines.length
+    ? footerLines
+    : FIXED_FOOTER_LINES;
+  const totalTextHeight =
+    mainLines.length * mainLineHeight +
+    subMarginTop +
+    subLines.length * subLineHeight;
 
   let yCenter = H * 0.5;
-  let y = Math.round(yCenter - totalTextHeight / 2 + fontSize * 0.9);
+  let y = Math.round(yCenter - totalTextHeight / 2 + mainFontSize * 0.9);
   const unitPx = Math.round(H * 0.01);
   const yOffset = getTextYOffsetUnits(bg) * unitPx;
   y += yOffset;
-  if (y < P + fontSize) y = P + fontSize;
+  if (y < P + mainFontSize) y = P + mainFontSize;
 
-  // ✅ 正文居中，最后一行（署名）右对齐
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (i === lines.length - 1) {
-      ctx.textAlign = "right";
-      ctx.fillText(line, W - rightPadding, y);
-    } else {
+  ctx.fillStyle = "#3A3A3A";
+  for (let i = 0; i < mainLines.length; i++) {
+    const line = mainLines[i];
+    ctx.textAlign = "center";
+    ctx.fillText(line, Math.round(W / 2), y);
+    y += mainLineHeight;
+  }
+
+  y += subMarginTop;
+  ctx.fillStyle = "#8A6F7B";
+  ctx.font = `${subFontSize}px "Source Han Serif SC", "Noto Serif SC", "Songti SC", "STSong", serif`;
+  for (let i = 0; i < subLines.length; i++) {
+    const line = String(subLines[i] ?? "");
+    if (line) {
       ctx.textAlign = "center";
       ctx.fillText(line, Math.round(W / 2), y);
     }
-    y += lineHeight;
+    y += subLineHeight;
   }
 
   return { canvas, seed, msg, bg };
