@@ -25,7 +25,7 @@ const messagesRaw = [
   "她有千钧力，亦有万万相。",
   "愿你不惑于年龄，\n不困于身材，\n独立且骄傲，\n自由且美好，\n一切美好皆属于你。",
   "做母亲 做妻子 做女儿 \n这些角色固然重要 \n但更重要的是 \n做你自己 \n 唯有如此 \n才能活得真实而自由",
-  "妇 \n 推到大山的女性 \n 38妇女节\n 是世界各国妇女争取和平\n 民主 平等 发展的节日",
+  "妇 \n 推大山的女性 \n 38妇女节\n 是世界各国妇女争取\n 民主 平等 发展的节日",
   "女子 \n 就是好",
   "女性的美好，\n无可替代，\n祝你自我绽放",
   "当女性称呼自己为妇女，\n不是因为年龄，\n而是因为力量。",
@@ -397,18 +397,26 @@ const textYOffsetUnitsByBg = {
   "images/bg6.jpg": -10, // 上移 10 个单位（1单位=画布高度1%）
 };
 const GLOBAL_TEXT_Y_OFFSET_UNITS = -10; // 全部文案统一上移 10%
+const BG1_PATH = "images/bg1.jpg";
+const BG1_TEXT_SHIFT_X_UNITS = 15; // bg1 文案向右偏移 15%
+const BG1_TEXT_SHIFT_Y_UNITS = 15; // bg1 文案向下偏移 15%
 
 let currentCardContent = null;
 
 function getTextYOffsetUnits(bg) {
+  if (bg === BG1_PATH) return 0;
   return GLOBAL_TEXT_Y_OFFSET_UNITS + (textYOffsetUnitsByBg[bg] || 0);
 }
 
 function applyPreviewTextOffset(msgEl, card, bg) {
   if (!msgEl || !card) return;
-  const units = getTextYOffsetUnits(bg);
-  const offsetPx = Math.round((card.clientHeight || 0) * (units / 100));
-  msgEl.style.transform = `translateY(${offsetPx}px)`;
+  const cardW = card.clientWidth || 0;
+  const cardH = card.clientHeight || 0;
+  const offsetYUnits = getTextYOffsetUnits(bg);
+  const offsetY = Math.round(cardH * (offsetYUnits / 100));
+  const offsetX = bg === BG1_PATH ? Math.round(cardW * (BG1_TEXT_SHIFT_X_UNITS / 100)) : 0;
+  const extraY = bg === BG1_PATH ? Math.round(cardH * (BG1_TEXT_SHIFT_Y_UNITS / 100)) : 0;
+  msgEl.style.transform = `translate(${offsetX}px, ${offsetY + extraY}px)`;
 }
 
 function escapeHtml(s) {
@@ -521,6 +529,7 @@ function render() {
 
   const card = document.getElementById("card");
   const front = document.getElementById("front");
+  const overlayEl = front ? front.querySelector(".overlay") : null;
   if (front) front.style.backgroundImage = `url("${bg}")`;
 
   // 按背景图真实比例设置卡片比例
@@ -542,6 +551,9 @@ function render() {
     <div class="msg-main">${String(mainText).split("\n").map(escapeHtml).join("<br>")}</div>
     <div class="msg-sub">${footerHtml}</div>
   `;
+  const isBg1Layout = bg === BG1_PATH;
+  msgEl.classList.toggle("is-bg1-layout", isBg1Layout);
+  if (overlayEl) overlayEl.classList.toggle("is-bg1-layout", isBg1Layout);
   applyPreviewTextOffset(msgEl, card, bg);
 
   const luckyBtn = document.getElementById("luckyBtn");
@@ -694,9 +706,15 @@ async function buildCardCanvas() {
   const subLineHeight = Math.max(1, Math.round(preview.subLineHeightPx * scaleToCanvas));
   const subMarginTop = Math.max(0, Math.round(preview.subMarginTopPx * scaleToCanvas));
   const textMaxWidth = Math.max(1, Math.round(preview.textWidth * scaleToCanvas));
+  const isBg1Layout = bg === BG1_PATH;
+  const shiftX = isBg1Layout ? Math.round(W * (BG1_TEXT_SHIFT_X_UNITS / 100)) : 0;
+  const shiftY = isBg1Layout ? Math.round(H * (BG1_TEXT_SHIFT_Y_UNITS / 100)) : 0;
+  const drawTextMaxWidth = isBg1Layout
+    ? Math.max(1, W - (P + shiftX) - P)
+    : textMaxWidth;
   ctx.font = `${mainFontSize}px "Source Han Serif SC", "Noto Serif SC", "Songti SC", "STSong", serif`;
 
-  const mainLines = wrapLinesByWidth(ctx, mainText, textMaxWidth);
+  const mainLines = wrapLinesByWidth(ctx, mainText, drawTextMaxWidth);
   const subLines = Array.isArray(footerLines) && footerLines.length
     ? footerLines
     : FIXED_FOOTER_LINES;
@@ -710,13 +728,16 @@ async function buildCardCanvas() {
   const unitPx = Math.round(H * 0.01);
   const yOffset = getTextYOffsetUnits(bg) * unitPx;
   y += yOffset;
+  if (isBg1Layout) y = P + mainFontSize + shiftY;
   if (y < P + mainFontSize) y = P + mainFontSize;
 
   ctx.fillStyle = "#3A3A3A";
+  const drawX = isBg1Layout ? P + shiftX : Math.round(W / 2);
+  const drawAlign = isBg1Layout ? "left" : "center";
   for (let i = 0; i < mainLines.length; i++) {
     const line = mainLines[i];
-    ctx.textAlign = "center";
-    ctx.fillText(line, Math.round(W / 2), y);
+    ctx.textAlign = drawAlign;
+    ctx.fillText(line, drawX, y);
     y += mainLineHeight;
   }
 
@@ -726,8 +747,8 @@ async function buildCardCanvas() {
   for (let i = 0; i < subLines.length; i++) {
     const line = String(subLines[i] ?? "");
     if (line) {
-      ctx.textAlign = "center";
-      ctx.fillText(line, Math.round(W / 2), y);
+      ctx.textAlign = drawAlign;
+      ctx.fillText(line, drawX, y);
     }
     y += subLineHeight;
   }

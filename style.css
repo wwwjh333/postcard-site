@@ -232,6 +232,10 @@ body{
   /* 不再加额外蒙版，直接展示原图 */
 }
 
+.overlay.is-bg1-layout{
+  justify-content:flex-start;
+}
+
 .msg{
   text-shadow: none;
   white-space: normal; /* 用 HTML <br> 来换行 */
@@ -256,6 +260,15 @@ body{
   line-height: 1.5;
   font-weight: 400;
   color: #8A6F7B;
+}
+
+.msg.is-bg1-layout .msg-main,
+.msg.is-bg1-layout .msg-sub{
+  text-align: left;
+}
+
+.msg.is-bg1-layout{
+  width: 85%;
 }
 
 .actions{
