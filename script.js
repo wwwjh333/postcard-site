@@ -398,6 +398,7 @@ const textYOffsetUnitsByBg = {
 };
 
 const LUCKY_RESULT_KEY = "postcard_lucky_result_v2";
+let currentCardContent = null;
 
 function getTextYOffsetUnits(bg) {
   return textYOffsetUnitsByBg[bg] || 0;
@@ -498,12 +499,15 @@ function playLuckyEnvelopeAnimation({ luckyBtn, luckyStage, luckyText, result })
   }, 1200);
 }
 
-function pickFromSeed(seed) {
+function getCurrentCardContent() {
+  if (currentCardContent) return currentCardContent;
+  const seed = ensureSeedInUrl();
   const r = seededRandom(seed);
   const bg = backgrounds[Math.floor(r() * backgrounds.length)];
-  const base = messages[Math.floor(r() * messages.length)];
+  const base = messages[Math.floor(Math.random() * messages.length)];
   const msg = appendSuffixToLastLine(base, "——妇女节快乐");
-  return { bg, msg };
+  currentCardContent = { seed, bg, msg };
+  return currentCardContent;
 }
 
 async function loadImageInfo(src) {
@@ -516,8 +520,7 @@ async function loadImageInfo(src) {
 }
 
 function render() {
-  const seed = ensureSeedInUrl();
-  const { bg, msg } = pickFromSeed(seed);
+  const { bg, msg } = getCurrentCardContent();
 
   const card = document.getElementById("card");
   const front = document.getElementById("front");
@@ -650,8 +653,7 @@ function getPreviewTextMetrics() {
 }
 
 async function buildCardCanvas() {
-  const seed = ensureSeedInUrl();
-  const { bg, msg } = pickFromSeed(seed);
+  const { seed, bg, msg } = getCurrentCardContent();
 
   const { img, w: iw, h: ih } = await loadImageInfo(bg);
 
