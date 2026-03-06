@@ -573,7 +573,7 @@ function render() {
       if (luckyBtn.classList.contains("is-loading")) return;
       const result = pickDeterministicLuckyResult();
       if (repeatLuckyNote) {
-        repeatLuckyNote.textContent = "同一链接的幸运结果固定，重复扫码仍是这一份惊喜。";
+        repeatLuckyNote.textContent = "这封幸运信封你已经签收过啦～我帮你保留上次的惊喜";
       }
       playLuckyEnvelopeAnimation({ luckyBtn, luckyStage, luckyText, result });
     };
