@@ -386,7 +386,7 @@ const messagesByGroup = groupMessages(dedupeMessages(messagesRaw));
 const messages = Object.values(messagesByGroup).flat();
 
 const luckyPrizePool = [
-  { tier: "C", title: "「春日加料」", detail: "→ 免费特色菜一份", weight: 40 },
+  { tier: "C", title: "「春日加料」", detail: "→ 免费特色小菜一份", weight: 40 },
   { tier: "D", title: "「饮品小升级」", detail: "→ 原味米汤一扎", weight: 50 },
   { tier: "B", title: "「不见不散」", detail: "→ 20元下次见面礼", weight: 7 },
   { tier: "A", title: "「这一桌今天很幸运」", detail: "→ 本桌9折", weight: 3 },
